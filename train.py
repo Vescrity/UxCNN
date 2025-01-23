@@ -11,7 +11,7 @@ RED = "\033[31m"
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
 BLUE = "\033[34m"
-RESET = "\033[0m"  # 重置颜色
+RESET = "\033[0m"
 
 # 训练函数
 def train(model, device, train_loader, optimizer, epoch):
@@ -22,19 +22,15 @@ def train(model, device, train_loader, optimizer, epoch):
         data, target = data.to(device), target.to(device)
         target = target.float()
 
-        # 清零梯度
         optimizer.zero_grad()
-        # 前向传播
         output = model(data)
-        # 计算损失
-        loss = F.mse_loss(output.squeeze(1), target)  # 根据需要选择合适的损失函数
+        loss = F.mse_loss(output.squeeze(1), target)
         running_loss += loss.item()
 
-        # 反向传播
         loss.backward()
         optimizer.step()
 
-        if batch_idx % 10 == 0:  # 每10个batch输出一次日志
+        if batch_idx % 10 == 0:
             print(f'Epoch: {epoch}, Progress: {batch_idx/len(train_loader)*100:.2f}%, Loss: {loss.item():.6f}')
     
     return running_loss / len(train_loader)
@@ -49,15 +45,12 @@ def validate(model, device, val_loader):
             data, target = data.to(device), target.to(device)
             target = target.float()
 
-            # 前向传播
             output = model(data)
             diff = (output[0]-target[0])
             print(f'{GREEN}OK!{RESET}' if torch.abs(diff) < 0.5 else f'{RED}FAILED{RESET}', end = '')
             print(f'{output[0]}, {target[0]}')
             
-            
-            # 计算损失
-            loss = F.mse_loss(output.squeeze(1), target)  # 根据需要选择合适的损失函数
+            loss = F.mse_loss(output.squeeze(1), target)
             running_loss += loss.item()
 
     return running_loss / len(val_loader)
@@ -82,14 +75,11 @@ def train_model(
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
     model = model.to(memory_format=torch.channels_last)
-    # 将模型移动到设备
     model = model.to(device)
-    # 定义优化器
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    train_losses = []  # 记录训练损失
-    val_losses = []    # 记录验证损失
-
+    train_losses = []
+    val_losses = []
     for epoch in range(epochs):
         train_loss = train(model, device, train_loader, optimizer, epoch)
         val_loss = validate(model, device, val_loader)
@@ -98,16 +88,17 @@ def train_model(
         print(f'Epoch: {epoch}, Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}')
     return train_losses, val_losses
 
-def pltloss(filename, train_losses, val_losses):
+def pltloss(title, train_losses, val_losses, ylim = (0, 10)):
     plt.figure(figsize=(10, 5))
     num_epochs = len(train_losses)
     plt.plot(range(num_epochs), train_losses, label='Train Loss', marker='o')
     plt.plot(range(num_epochs), val_losses, label='Val Loss', marker='o')
-    plt.title('Training and Validation Loss')
+    plt.title(f'Loss of {title}')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
+    plt.ylim(ylim)
     plt.legend()
     plt.grid()
-    plt.savefig(filename)
+    plt.savefig(f'{title}.png')
     plt.close()
     
