@@ -41,19 +41,25 @@ def validate(model, device, val_loader):
     running_loss = 0.0
     
     with torch.no_grad():
+        cnt = 0
         for data, target in val_loader:
             data, target = data.to(device), target.to(device)
             target = target.float()
 
             output = model(data)
             diff = (output[0]-target[0])
-            print(f'{GREEN}OK!{RESET}' if torch.abs(diff) < 0.5 else f'{RED}FAILED{RESET}', end = '')
+            if torch.abs(diff) < 0.5:
+                cnt += 1
+                print(f'[  {GREEN}OK{RESET}  ]', end = '')
+            else:
+                print(f'[{RED}FAILED{RESET}]', end = '')
             print(f'{output[0]}, {target[0]}')
             
             loss = F.mse_loss(output.squeeze(1), target)
             running_loss += loss.item()
-
-    return running_loss / len(val_loader)
+    print(cnt)
+    print(len(val_loader))
+    return running_loss / len(val_loader), cnt/len(val_loader)
 
 
 def train_model(
@@ -80,19 +86,22 @@ def train_model(
 
     train_losses = []
     val_losses = []
+    ac = []
     for epoch in range(epochs):
         train_loss = train(model, device, train_loader, optimizer, epoch)
-        val_loss = validate(model, device, val_loader)
+        val_loss, acc = validate(model, device, val_loader)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
+        ac.append(acc)
         print(f'Epoch: {epoch}, Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}')
-    return train_losses, val_losses
+    return train_losses, val_losses, ac
 
-def pltloss(title, train_losses, val_losses, ylim = (0, 10)):
+def pltloss(title, train_losses, val_losses, ac, ylim = (0, 10)):
     plt.figure(figsize=(10, 5))
     num_epochs = len(train_losses)
     plt.plot(range(num_epochs), train_losses, label='Train Loss', marker='o')
     plt.plot(range(num_epochs), val_losses, label='Val Loss', marker='o')
+    plt.plot(range(num_epochs), np.array(ac)*10, label='Accept', marker='+')
     plt.title(f'Loss of {title}')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')

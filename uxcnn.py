@@ -119,3 +119,23 @@ class UscCNN(UxCNN):
     @staticmethod
     def xfunc(ori_img, binary):
         return extract_sorted_with_center(ori_img, binary)
+
+import imgutils
+imgutils.SAVE_COMPARE = True
+class CVsCNN(nn.Module):
+    def __init__(self, n_channels = 3, n_classes = 1):
+        super(CVsCNN, self).__init__()
+        self.cnn = SimpleCNN()
+
+    def forward(self, x):
+        ori_img = x 
+        im = imgutils.tensor2im(x)
+        _, bi=imgutils.get_imglist(im)
+        bi = imgutils.bin2tensor(bi)
+        bi = bi.cuda()
+        xx = extract_sorted(ori_img, bi)
+        resized_pixels = F.interpolate(xx, size=(TARGET_LENGTH,), mode='linear', align_corners=False)
+        output = self.cnn(resized_pixels)
+        return output
+
+
