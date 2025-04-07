@@ -36,30 +36,77 @@ def train(model, device, train_loader, optimizer, epoch):
     return running_loss / len(train_loader)
 
 # 验证函数
-def validate(model, device, val_loader):
+
+def validate(model, device, val_loader, plot_distribution=False, plot_path=None):
     model.eval()
     running_loss = 0.0
+    all_diffs = []  # 存储所有差异值
+    cnt = 0
     
     with torch.no_grad():
-        cnt = 0
         for data, target in val_loader:
             data, target = data.to(device), target.to(device)
             target = target.float()
 
             output = model(data)
             diff = (output[0]-target[0])
+            all_diffs.append(diff.item())  # 收集差异值
+            
             if torch.abs(diff) < 0.5:
                 cnt += 1
-                print(f'[  {GREEN}OK{RESET}  ]', end = '')
+                print(f'[  {GREEN}OK{RESET}  ]', end='')
             else:
-                print(f'[{RED}FAILED{RESET}]', end = '')
+                print(f'[{RED}FAILED{RESET}]', end='')
             print(f'{output[0]}, {target[0]}')
             
             loss = F.mse_loss(output.squeeze(1), target)
             running_loss += loss.item()
-    print(cnt)
-    print(len(val_loader))
-    return running_loss / len(val_loader), cnt/len(val_loader)
+    
+    # 计算统计指标
+    avg_loss = running_loss / len(val_loader)
+    accuracy = cnt / len(val_loader)
+    
+    print(f"\nCorrect predictions: {cnt}/{len(val_loader)} ({accuracy:.2%})")
+    print(f"Average loss: {avg_loss:.4f}")
+    
+    # 绘制并保存差异分布图
+    if plot_distribution:
+        plt.figure(figsize=(10, 6))
+        
+        # 绘制直方图
+        plt.hist(all_diffs, bins=30, alpha=0.7, color='blue', edgecolor='black')
+        
+        # 添加统计信息
+        mean_diff = np.mean(all_diffs)
+        std_diff = np.std(all_diffs)
+        plt.axvline(mean_diff, color='red', linestyle='dashed', linewidth=1)
+        plt.axvline(mean_diff + std_diff, color='green', linestyle='dashed', linewidth=1)
+        plt.axvline(mean_diff - std_diff, color='green', linestyle='dashed', linewidth=1)
+        
+        # 添加标签和标题
+        plt.title('Prediction Error Distribution')
+        plt.xlabel('Difference (Prediction - Target)')
+        plt.ylabel('Frequency')
+        plt.grid(True, alpha=0.3)
+        
+        # 添加图例
+        plt.legend([
+            f'Mean: {mean_diff:.4f}',
+            f'Std: ±{std_diff:.4f}',
+            'Error Distribution'
+        ])
+        
+        # 保存图像到文件
+        if plot_path is None:
+            plot_path = "error_distribution.png"
+        
+        # 确保目录存在
+        os.makedirs(os.path.dirname(plot_path), exist_ok=True)
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.close()  # 关闭图形，避免内存泄漏
+        print(f"Error distribution plot saved to: {plot_path}")
+    
+    return avg_loss, accuracy
 
 
 def train_model(

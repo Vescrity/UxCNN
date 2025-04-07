@@ -39,7 +39,6 @@ def tensor2im(tensor):
     """
     将 PyTorch 张量转换为彩色图像。
     """
-    print(tensor.size())
     tensor = tensor.cpu()
     image = tensor[0].permute(1, 2, 0).numpy() * 255.0
     return image.astype(np.uint8)
@@ -54,9 +53,7 @@ def im2tensor(image):
 
 
 def bin2tensor(image):
-    """
-    对输入图像进行二值化处理，并将二值化图像转换为 PyTorch 张量。
-    """
+
     _, binary_image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
 
     # 将二值化图像转换为张量
@@ -133,9 +130,9 @@ def generate_unique_filename(directory, extension):
             return full_path
 
 def get_imglist(img,
-                R=70,
+                R=50,
                 INCREASE = 20,     #开运算边界增强
-                THRES_CIRCULARITY = 0.33,
+                THRES_CIRCULARITY = 0.6,
                 THRES_AREA = -1,
                 BLUR_SIZE = -1
                ):
@@ -154,7 +151,7 @@ def get_imglist(img,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
         cv2.THRESH_BINARY, 
         6*R+1,  # blockSize
-        2    # C
+        2    # C，从计算出的阈值中减去的值，用于调节结果。
     )
     kernel = np.ones((INCREASE, INCREASE), np.uint8)
     th2 = cv2.morphologyEx(thres, cv2.MORPH_OPEN, kernel)
